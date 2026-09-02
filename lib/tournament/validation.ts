@@ -1,3 +1,4 @@
+import { parsePhoneNumberFromString } from "libphonenumber-js"
 import { z } from "zod"
 
 import {
@@ -7,12 +8,27 @@ import {
   MIN_TEAM_MEMBERS,
 } from "./constants"
 
+/** Numbers typed without a country code are read as Indian. */
+export const DEFAULT_PHONE_COUNTRY = "IN" as const
+
 /**
- * Strips formatting characters so `+91 98765-43210` and `+919876543210`
- * are treated as the same number for validation and duplicate detection.
+ * Normalizes to E.164 (`+919876543210`) so `+91 98765-43210`, `09876543210`
+ * and `9876543210` all become the same stored value — which is both what an
+ * SMS gateway wants and what makes the global uniqueness index meaningful.
+ *
+ * Input that cannot be parsed is only stripped of separators; `phoneSchema`
+ * then rejects it with a message.
  */
 export function normalizePhone(value: string): string {
+  const parsed = parsePhoneNumberFromString(value.trim(), DEFAULT_PHONE_COUNTRY)
+  if (parsed?.isValid()) return parsed.number
   return value.replace(/[\s()\-.]/g, "")
+}
+
+export function isValidPhone(value: string): boolean {
+  return (
+    parsePhoneNumberFromString(value, DEFAULT_PHONE_COUNTRY)?.isValid() ?? false
+  )
 }
 
 export function normalizeEmail(value: string): string {
@@ -24,17 +40,17 @@ export function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, " ")
 }
 
-const phoneSchema = z
+export const phoneSchema = z
   .string()
   .trim()
   .min(1, "Phone number is required")
   .transform(normalizePhone)
   .refine(
-    (value) => /^\+?[1-9]\d{9,14}$/.test(value),
-    "Enter a valid phone number (10–15 digits, optionally with a country code)"
+    isValidPhone,
+    "Enter a real mobile number, with a country code if it is not Indian"
   )
 
-const emailSchema = z
+export const emailSchema = z
   .string()
   .trim()
   .min(1, "Email address is required")
@@ -57,22 +73,37 @@ const personNameSchema = z
       )
   )
 
+const inGameIdSchema = z
+  .string()
+  .trim()
+  .min(3, "In-Game ID must be at least 3 characters")
+  .max(40, "In-Game ID must be 40 characters or fewer")
+  .regex(
+    /^[A-Za-z0-9._\-\[\]|]+$/,
+    "In-Game ID may only contain letters, numbers and . _ - [ ] |"
+  )
+
 export const teamMemberSchema = z.object({
   fullName: personNameSchema,
   phone: phoneSchema,
   email: emailSchema,
-  inGameId: z
-    .string()
-    .trim()
-    .min(3, "In-Game ID must be at least 3 characters")
-    .max(40, "In-Game ID must be 40 characters or fewer")
-    .regex(
-      /^[A-Za-z0-9._\-\[\]|]+$/,
-      "In-Game ID may only contain letters, numbers and . _ - [ ] |"
-    ),
+  inGameId: inGameIdSchema,
 })
 
 export type TeamMemberInput = z.infer<typeof teamMemberSchema>
+
+/**
+ * What a player may change on their own verification page. Email is absent on
+ * purpose: the link was delivered to it, so changing it would need a new link
+ * — that correction belongs to the IGL.
+ */
+export const memberSelfEditSchema = z.object({
+  fullName: personNameSchema,
+  phone: phoneSchema,
+  inGameId: inGameIdSchema,
+})
+
+export type MemberSelfEditInput = z.infer<typeof memberSelfEditSchema>
 
 /** Fields the IGL fills in for the team itself. */
 export const teamDetailsSchema = z.object({
@@ -93,6 +124,7 @@ export const teamDetailsSchema = z.object({
   iglName: personNameSchema,
   iglPhone: phoneSchema,
   iglEmail: emailSchema,
+  iglInGameId: inGameIdSchema,
 })
 
 /**
