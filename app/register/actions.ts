@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import { db } from "@/lib/db"
+import { uniqueViolationName } from "@/lib/db/errors"
 import { teamMembers, teams } from "@/lib/db/schema"
 import { MAX_TEAM_MEMBERS } from "@/lib/tournament/constants"
 import {
@@ -12,20 +13,13 @@ import {
   saveTeamLogo,
 } from "@/lib/tournament/logo-storage"
 import { logoSchema, registrationSchema } from "@/lib/tournament/validation"
+import {
+  dispatchVerificationEmails,
+  mintVerificationToken,
+  verificationDeadline,
+} from "@/lib/verification/service"
 
-export type RegistrationState = {
-  status: "idle" | "success" | "error"
-  message: string
-  /** Errors keyed by field path, e.g. `teamName` or `members.1.email`. */
-  fieldErrors: Record<string, string>
-  team?: { id: string; teamName: string; memberCount: number }
-}
-
-export const initialRegistrationState: RegistrationState = {
-  status: "idle",
-  message: "",
-  fieldErrors: {},
-}
+import type { RegistrationState } from "./registration-state"
 
 /** Maps a database unique index onto the form field that caused it. */
 const UNIQUE_VIOLATIONS: Record<string, { field: string; message: string }> = {
@@ -41,6 +35,10 @@ const UNIQUE_VIOLATIONS: Record<string, { field: string; message: string }> = {
     field: "iglPhone",
     message: "This phone number is already registered as an IGL for another team",
   },
+  teams_igl_ign_unique: {
+    field: "iglInGameId",
+    message: "This In-Game ID is already registered as an IGL for another team",
+  },
   team_members_ign_unique: {
     field: "members",
     message: "One of these In-Game IDs is already rostered on another team",
@@ -48,6 +46,10 @@ const UNIQUE_VIOLATIONS: Record<string, { field: string; message: string }> = {
   team_members_email_unique: {
     field: "members",
     message: "One of these email addresses is already rostered on another team",
+  },
+  team_members_phone_unique: {
+    field: "members",
+    message: "One of these phone numbers is already rostered on another team",
   },
 }
 
@@ -84,6 +86,7 @@ export async function registerTeam(
     iglName: formData.get("iglName") ?? "",
     iglPhone: formData.get("iglPhone") ?? "",
     iglEmail: formData.get("iglEmail") ?? "",
+    iglInGameId: formData.get("iglInGameId") ?? "",
     members: readMembers(formData),
   })
 
@@ -106,6 +109,11 @@ export async function registerTeam(
   let storedLogo: Awaited<ReturnType<typeof saveTeamLogo>> | undefined
   let team: { id: string; teamName: string }
 
+  // Link tokens are minted before the insert so the plaintext is available to
+  // the mailer afterwards; only the digests are ever written.
+  const hubToken = mintVerificationToken()
+  const memberTokens = registration.members.map(() => mintVerificationToken())
+
   try {
     storedLogo = await saveTeamLogo(logo.data)
 
@@ -120,6 +128,9 @@ export async function registerTeam(
           iglName: registration.iglName,
           iglPhone: registration.iglPhone,
           iglEmail: registration.iglEmail,
+          iglInGameId: registration.iglInGameId,
+          hubTokenHash: hubToken.hash,
+          verificationExpiresAt: verificationDeadline(),
         })
         .returning({ id: teams.id, teamName: teams.teamName })
 
@@ -131,12 +142,12 @@ export async function registerTeam(
           email: member.email,
           inGameId: member.inGameId,
           position: index + 1,
+          verifyTokenHash: memberTokens[index].hash,
         }))
       )
 
       return inserted
     })
-
   } catch (error) {
     if (storedLogo) await deleteTeamLogo(storedLogo.url)
 
@@ -148,7 +159,8 @@ export async function registerTeam(
       }
     }
 
-    const conflict = matchUniqueViolation(error)
+    const constraint = uniqueViolationName(error)
+    const conflict = constraint ? UNIQUE_VIOLATIONS[constraint] : null
     if (conflict) {
       return {
         status: "error",
@@ -168,37 +180,32 @@ export async function registerTeam(
 
   // Outside the try/catch: the registration is committed at this point, so a
   // failure here must never be reported to the IGL as a failed submission.
+  const dispatch = await dispatchVerificationEmails({
+    team: {
+      teamName: team.teamName,
+      iglName: registration.iglName,
+      iglEmail: registration.iglEmail,
+    },
+    hubToken: hubToken.token,
+    members: registration.members.map((member, index) => ({
+      fullName: member.fullName,
+      email: member.email,
+      token: memberTokens[index].token,
+    })),
+  })
+
   revalidatePath("/admin/registrations")
 
   return {
     status: "success",
-    message: `${team.teamName} is registered. Tournament organizers will review the roster and contact the IGL.`,
+    message: `${team.teamName} is registered. Check your inbox for the roster dashboard link — every player has been emailed their own verification link.`,
     fieldErrors: {},
     team: {
       id: team.id,
       teamName: team.teamName,
       memberCount: registration.members.length,
+      iglEmail: registration.iglEmail,
+      undelivered: dispatch.failed,
     },
   }
-}
-
-/**
- * Drizzle wraps driver errors in a `DrizzleQueryError`, so the Postgres error
- * carrying the violated constraint sits somewhere on the `cause` chain.
- */
-function matchUniqueViolation(error: unknown) {
-  let current: unknown = error
-
-  while (typeof current === "object" && current !== null) {
-    const { code, constraint_name: constraintName } = current as {
-      code?: string
-      constraint_name?: string
-    }
-    if (code === "23505" && constraintName) {
-      return UNIQUE_VIOLATIONS[constraintName] ?? null
-    }
-    current = (current as { cause?: unknown }).cause
-  }
-
-  return null
 }

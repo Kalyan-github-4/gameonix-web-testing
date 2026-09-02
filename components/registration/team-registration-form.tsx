@@ -2,13 +2,13 @@
 
 import * as React from "react"
 import Image from "next/image"
-import { CheckCircle2, ImageUp, Plus, Trash2, Users } from "lucide-react"
+import { ImageUp, MailCheck, Plus, Trash2, Users } from "lucide-react"
 
+import { registerTeam } from "@/app/register/actions"
 import {
   initialRegistrationState,
-  registerTeam,
   type RegistrationState,
-} from "@/app/register/actions"
+} from "@/app/register/registration-state"
 import { Field, fieldProps } from "@/components/registration/field"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,6 +25,7 @@ import {
   MAX_LOGO_BYTES,
   MAX_TEAM_MEMBERS,
   MIN_TEAM_MEMBERS,
+  ROSTER_SIZE_LABEL,
 } from "@/lib/tournament/constants"
 import { logoSchema, registrationSchema } from "@/lib/tournament/validation"
 import { cn } from "@/lib/utils"
@@ -116,6 +117,7 @@ export function TeamRegistrationForm() {
       iglName: String(formData.get("iglName") ?? ""),
       iglPhone: String(formData.get("iglPhone") ?? ""),
       iglEmail: String(formData.get("iglEmail") ?? ""),
+      iglInGameId: String(formData.get("iglInGameId") ?? ""),
       members: rows.map((_, index) => ({
         fullName: String(formData.get(`members[${index}].fullName`) ?? ""),
         phone: String(formData.get(`members[${index}].phone`) ?? ""),
@@ -303,18 +305,26 @@ export function TeamRegistrationForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2">
-          <Field
-            id="iglName"
-            label="IGL name"
-            error={errors.iglName}
-            className="sm:col-span-2"
-          >
+          <Field id="iglName" label="IGL name" error={errors.iglName}>
             <Input
               {...fieldProps("iglName", errors.iglName)}
               name="iglName"
               autoComplete="name"
               placeholder="Rohan Verma"
               onChange={() => clearError("iglName")}
+            />
+          </Field>
+          <Field
+            id="iglInGameId"
+            label="IGL In-Game ID (IGN / UID)"
+            error={errors.iglInGameId}
+          >
+            <Input
+              {...fieldProps("iglInGameId", errors.iglInGameId)}
+              name="iglInGameId"
+              autoComplete="off"
+              placeholder="5182930471"
+              onChange={() => clearError("iglInGameId")}
             />
           </Field>
           <Field id="iglPhone" label="IGL phone number" error={errors.iglPhone}>
@@ -351,9 +361,10 @@ export function TeamRegistrationForm() {
             </span>
           </CardTitle>
           <CardDescription>
-            Add every player on the roster ({MIN_TEAM_MEMBERS}–
-            {MAX_TEAM_MEMBERS} members). Include yourself if you are playing.
-            Each player needs a unique phone number, email and In-Game ID.
+            Add every player on the roster ({ROSTER_SIZE_LABEL}). Each player
+            needs a unique phone number, email and In-Game ID — they are emailed
+            a verification link at the address you enter here, so double-check
+            the spelling.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -441,28 +452,37 @@ export function TeamRegistrationForm() {
 }
 
 function SuccessPanel({ state }: { state: RegistrationState }) {
+  const undelivered = state.team?.undelivered ?? []
+
   return (
     <Card>
       <CardContent className="grid gap-3 py-6 text-center">
-        <CheckCircle2
-          className="mx-auto size-8 text-primary"
-          aria-hidden="true"
-        />
-        <h2 className="text-lg font-semibold">Registration received</h2>
-        <p className="text-sm text-muted-foreground">{state.message}</p>
+        <MailCheck className="mx-auto size-8 text-primary" aria-hidden="true" />
+        <h2 className="text-lg font-semibold">Check your inbox</h2>
+        <p className="mx-auto max-w-md text-sm text-muted-foreground">
+          {state.message}
+        </p>
+        <ol className="mx-auto grid max-w-md gap-1.5 text-left text-sm text-muted-foreground">
+          <li>1. Open your roster dashboard link and verify your own phone.</li>
+          <li>2. Each player opens their link, checks their details and verifies their phone.</li>
+          <li>3. Submit the roster from the dashboard once everyone is green.</li>
+        </ol>
+
+        {undelivered.length > 0 ? (
+          <p
+            role="alert"
+            className="mx-auto max-w-md rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-left text-xs text-destructive"
+          >
+            We could not deliver to {undelivered.join(", ")}. Your team is saved
+            — resend those links from the roster dashboard.
+          </p>
+        ) : null}
+
         <p className="text-xs text-muted-foreground">
           Registration ID: <code>{state.team?.id}</code> ·{" "}
-          {state.team?.memberCount} members
+          {state.team?.memberCount} player
+          {state.team?.memberCount === 1 ? "" : "s"}
         </p>
-        <div className="mt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => window.location.reload()}
-          >
-            Register another team
-          </Button>
-        </div>
       </CardContent>
     </Card>
   )

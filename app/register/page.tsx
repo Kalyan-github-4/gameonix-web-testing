@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 import { TeamRegistrationForm } from "@/components/registration/team-registration-form"
-import { MAX_TEAM_MEMBERS, MIN_TEAM_MEMBERS } from "@/lib/tournament/constants"
+import { ROSTER_SIZE_LABEL } from "@/lib/tournament/constants"
 
 export const metadata: Metadata = {
   title: "Team registration | Gamonix",
@@ -22,8 +22,13 @@ export default function RegisterPage() {
         <p className="text-sm text-muted-foreground">
           The In-Game Leader registers on behalf of the entire team: team
           details, the IGL&apos;s contact information, and every player on the
-          roster ({MIN_TEAM_MEMBERS}–{MAX_TEAM_MEMBERS} members). Fields marked
-          with <span className="text-destructive">*</span> are required.
+          roster ({ROSTER_SIZE_LABEL}). Fields marked with{" "}
+          <span className="text-destructive">*</span> are required.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Nothing reaches the organizers straight away. Every player is emailed
+          their own link to check their details and verify their phone by SMS —
+          you submit the roster once everyone is green.
         </p>
       </header>
 
