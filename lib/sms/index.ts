@@ -13,8 +13,53 @@ export async function sendSms(to: string, body: string): Promise<SmsResult> {
   switch (provider) {
     case "console":
       return consoleTransport(to, body)
+    case "fast2sms":
+      return fast2SmsTransport(to, body)
     default:
       return { ok: false, error: `Unknown SMS_PROVIDER "${provider}"` }
+  }
+}
+
+async function fast2SmsTransport(to: string, body: string): Promise<SmsResult> {
+  const apiKey = process.env.FAST2SMS_API_KEY
+  if (!apiKey) return { ok: false, error: "FAST2SMS_API_KEY is not set" }
+
+  const numbers = to.replace(/\D/g, "").slice(-10)
+  if (numbers.length !== 10) {
+    return { ok: false, error: "Fast2SMS requires an Indian 10-digit phone number" }
+  }
+
+  try {
+    const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+      method: "POST",
+      headers: {
+        authorization: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        route: "q",
+        message: body,
+        language: "english",
+        flash: 0,
+        numbers,
+      }),
+    })
+
+    const result = (await response.json()) as { message?: string[] | string }
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: Array.isArray(result.message)
+          ? result.message.join(", ")
+          : result.message ?? `Fast2SMS returned HTTP ${response.status}`,
+      }
+    }
+    return { ok: true }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Fast2SMS request failed",
+    }
   }
 }
 

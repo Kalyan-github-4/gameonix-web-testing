@@ -47,6 +47,14 @@ export function mailFrom(): string {
   return process.env.MAIL_FROM ?? "Gamonix <onboarding@resend.dev>"
 }
 
+export function mailProvider(): "resend" | "smtp" {
+  const provider = process.env.MAIL_PROVIDER ?? "resend"
+  if (provider !== "resend" && provider !== "smtp") {
+    throw new Error(`Unknown MAIL_PROVIDER "${provider}". Use "resend" or "smtp".`)
+  }
+  return provider
+}
+
 /** Master switch — flip it off to stop every outbound link and code at once. */
 export function verificationEnabled(): boolean {
   return process.env.VERIFICATION_ENABLED !== "false"
