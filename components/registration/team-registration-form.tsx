@@ -156,14 +156,21 @@ export function TeamRegistrationForm() {
     return found
   }
 
-  function handleAction(formData: FormData) {
+  /**
+   * Submits through `onSubmit` rather than `<form action>`: React resets every
+   * uncontrolled field once a form action settles, which would wipe the whole
+   * roster whenever a single field was rejected.
+   */
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
     const found = validate(formData)
     setClientErrors(found)
     focusOnErrorRef.current = true
 
     if (Object.keys(found).length > 0) return
 
-    formAction(formData)
+    React.startTransition(() => formAction(formData))
   }
 
   function handleLogoChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -215,7 +222,12 @@ export function TeamRegistrationForm() {
   const rosterError = errors.members
 
   return (
-    <form ref={formRef} action={handleAction} noValidate className="grid gap-6">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      noValidate
+      className="grid gap-6"
+    >
       <input type="hidden" name="memberCount" value={rows.length} />
 
       {state.status === "error" ? (

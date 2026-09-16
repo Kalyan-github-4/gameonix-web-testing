@@ -113,10 +113,13 @@ export async function registerTeam(
 
   // Link tokens are minted before the insert so the plaintext is available to
   // the mailer afterwards; only the digests are ever written.
-  const hubToken = mintVerificationToken()
-  const memberTokens = registration.members.map(() => mintVerificationToken())
+  let hubToken: ReturnType<typeof mintVerificationToken>
+  let memberTokens: ReturnType<typeof mintVerificationToken>[]
 
   try {
+    hubToken = mintVerificationToken()
+    memberTokens = registration.members.map(() => mintVerificationToken())
+
     storedLogo = await saveTeamLogo(logo.data)
 
     team = await db.transaction(async (tx) => {
@@ -184,19 +187,31 @@ export async function registerTeam(
 
   // Outside the try/catch: the registration is committed at this point, so a
   // failure here must never be reported to the IGL as a failed submission.
-  const dispatch = await dispatchVerificationEmails({
-    team: {
-      teamName: team.teamName,
-      iglName: registration.iglName,
-      iglEmail: registration.iglEmail,
-    },
-    hubToken: hubToken.token,
-    members: registration.members.map((member, index) => ({
-      fullName: member.fullName,
-      email: member.email,
-      token: memberTokens[index].token,
-    })),
-  })
+  let undelivered: string[]
+  try {
+    const dispatch = await dispatchVerificationEmails({
+      team: {
+        teamName: team.teamName,
+        iglName: registration.iglName,
+        iglEmail: registration.iglEmail,
+      },
+      hubToken: hubToken.token,
+      members: registration.members.map((member, index) => ({
+        fullName: member.fullName,
+        email: member.email,
+        token: memberTokens[index].token,
+      })),
+    })
+    undelivered = dispatch.failed
+  } catch (error) {
+    // Usually a missing APP_URL or mail setting. Report every address as
+    // undelivered instead of crashing a registration that is already saved.
+    console.error("Verification email dispatch failed", error)
+    undelivered = [
+      registration.iglEmail,
+      ...registration.members.map((member) => member.email),
+    ]
+  }
 
   revalidatePath("/admin/registrations")
 
@@ -209,7 +224,7 @@ export async function registerTeam(
       teamName: team.teamName,
       memberCount: registration.members.length,
       iglEmail: registration.iglEmail,
-      undelivered: dispatch.failed,
+      undelivered,
     },
   }
 }

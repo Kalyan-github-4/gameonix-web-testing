@@ -12,8 +12,11 @@ function required(name: string, hint: string): string {
 
 /** Absolute base for emailed links — a relative URL is useless in an inbox. */
 export function appUrl(): string {
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL
   const value =
     process.env.APP_URL ??
+    (vercelHost ? `https://${vercelHost}` : undefined) ??
     (process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000")
 
   if (!value) {
