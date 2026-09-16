@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "verify:smoke": "tsx scripts/verify-smoke.ts",
     "verify:links": "tsx scripts/verify-links.ts"
@@ -25,9 +26,9 @@
     "jsonwebtoken": "^9.0.3",
     "libphonenumber-js": "^1.13.12",
     "lucide-react": "^1.39.0",
-    "mysql2": "^3.24.4",
     "next": "16.3.4",
     "nodemailer": "^10.0.0",
+    "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "resend": "^6.25.0",

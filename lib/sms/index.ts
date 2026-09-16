@@ -45,8 +45,14 @@ async function fast2SmsTransport(to: string, body: string): Promise<SmsResult> {
       }),
     })
 
-    const result = (await response.json()) as { message?: string[] | string }
-    if (!response.ok) {
+    const result = (await response.json()) as {
+      return?: boolean
+      message?: string[] | string
+    }
+
+    // Fast2SMS reports most failures as HTTP 200 with `return: false`, so the
+    // status code alone would let a rejected send look delivered.
+    if (!response.ok || result.return !== true) {
       return {
         ok: false,
         error: Array.isArray(result.message)

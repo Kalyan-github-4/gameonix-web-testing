@@ -40,15 +40,23 @@ export function resendApiKey(): string {
 }
 
 /**
- * Resend only delivers to arbitrary inboxes from a verified domain. Until one
- * is set up, `onboarding@resend.dev` reaches the account owner's own address.
+ * The envelope sender. Most SMTP providers — Gmail included — reject a From
+ * that is not the authenticated mailbox, so this defaults to SMTP_USER.
  */
 export function mailFrom(): string {
-  return process.env.MAIL_FROM ?? "Gamonix <onboarding@resend.dev>"
+  return (
+    process.env.MAIL_FROM ??
+    (mailProvider() === "smtp"
+      ? required(
+          "SMTP_USER",
+          "It is also used as the From address when MAIL_FROM is unset."
+        )
+      : "Gamonix <onboarding@resend.dev>")
+  )
 }
 
 export function mailProvider(): "resend" | "smtp" {
-  const provider = process.env.MAIL_PROVIDER ?? "resend"
+  const provider = process.env.MAIL_PROVIDER ?? "smtp"
   if (provider !== "resend" && provider !== "smtp") {
     throw new Error(`Unknown MAIL_PROVIDER "${provider}". Use "resend" or "smtp".`)
   }
