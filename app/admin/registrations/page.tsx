@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import Image from "next/image"
 import { asc, desc, inArray, sql } from "drizzle-orm"
 
@@ -10,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { StatusChip } from "@/components/verification/status-chip"
+import { hasAdminCredentials } from "@/lib/admin/auth"
 import { db } from "@/lib/db"
 import { teamMembers, teams } from "@/lib/db/schema"
 
@@ -29,6 +31,16 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default async function RegistrationsPage() {
+  // The proxy already rejected this request if the credentials were wrong.
+  // Checking again here is deliberate: the proxy is what prompts the browser,
+  // but this is what stands between an unauthenticated request and a table of
+  // every player's name, phone number and email.
+  const authorized = await hasAdminCredentials(
+    (await headers()).get("authorization")
+  )
+
+  if (!authorized) return <Unauthorized />
+
   const allTeams = await db
     .select()
     .from(teams)
@@ -195,6 +207,22 @@ export default async function RegistrationsPage() {
           })}
         </div>
       )}
+    </main>
+  )
+}
+
+function Unauthorized() {
+  return (
+    <main className="mx-auto flex min-h-svh max-w-md items-center px-4">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-base">Organizers only</CardTitle>
+          <CardDescription>
+            This page needs organizer credentials. Close the tab and open it
+            again to be prompted.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </main>
   )
 }
