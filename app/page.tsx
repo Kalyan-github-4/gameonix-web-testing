@@ -23,7 +23,10 @@ export default function Home() {
           <Button
             size="lg"
             variant="outline"
-            render={<Link href="/admin/registrations" />}
+            // Prefetching this would fire a background request at a route
+            // that answers 401, and the browser would show its credential
+            // dialog here on the public landing page.
+            render={<Link href="/admin/registrations" prefetch={false} />}
           >
             Organizer view
           </Button>
