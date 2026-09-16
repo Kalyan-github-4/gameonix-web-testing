@@ -235,12 +235,7 @@ export function TeamRegistrationForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2">
-          <Field
-            id="teamName"
-            label="Team name"
-            error={errors.teamName}
-            className="sm:col-span-2"
-          >
+          <Field id="teamName" label="Team name" error={errors.teamName}>
             <Input
               {...fieldProps("teamName", errors.teamName)}
               name="teamName"
@@ -250,7 +245,7 @@ export function TeamRegistrationForm() {
             />
           </Field>
 
-          <div className="grid gap-1.5 sm:col-span-2">
+          <div className="grid content-start gap-1.5">
             <Label htmlFor="logo">
               Team logo
               <span className="text-destructive" aria-hidden="true">
@@ -258,9 +253,10 @@ export function TeamRegistrationForm() {
               </span>
             </Label>
             <div className="flex items-center gap-4">
-              <div
+              <label
+                htmlFor="logo"
                 className={cn(
-                  "flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-input bg-muted/40",
+                  "flex size-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-input bg-muted/40 transition-colors hover:border-ring hover:bg-muted",
                   errors.logo && "border-destructive"
                 )}
               >
@@ -279,7 +275,7 @@ export function TeamRegistrationForm() {
                     aria-hidden="true"
                   />
                 )}
-              </div>
+              </label>
               <div className="grid flex-1 gap-1.5">
                 <Input
                   {...fieldProps("logo", errors.logo)}
@@ -287,7 +283,7 @@ export function TeamRegistrationForm() {
                   name="logo"
                   accept={LOGO_ACCEPT_ATTRIBUTE}
                   onChange={handleLogoChange}
-                  className="h-auto py-1.5"
+                  className="h-auto cursor-pointer py-1.5 file:cursor-pointer"
                 />
                 <p className="text-xs text-muted-foreground">
                   PNG, JPEG or WebP · up to{" "}

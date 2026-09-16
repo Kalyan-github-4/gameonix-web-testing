@@ -63,6 +63,7 @@ function readMembers(formData: FormData) {
     fullName: String(formData.get(`members[${index}].fullName`) ?? ""),
     phone: String(formData.get(`members[${index}].phone`) ?? ""),
     email: String(formData.get(`members[${index}].email`) ?? ""),
+    inGameName: String(formData.get(`members[${index}].inGameName`) ?? ""),
     inGameId: String(formData.get(`members[${index}].inGameId`) ?? ""),
   }))
 }
@@ -86,6 +87,7 @@ export async function registerTeam(
     iglName: formData.get("iglName") ?? "",
     iglPhone: formData.get("iglPhone") ?? "",
     iglEmail: formData.get("iglEmail") ?? "",
+    iglInGameName: formData.get("iglInGameName") ?? "",
     iglInGameId: formData.get("iglInGameId") ?? "",
     members: readMembers(formData),
   })
