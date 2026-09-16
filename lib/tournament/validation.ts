@@ -73,6 +73,32 @@ const personNameSchema = z
       )
   )
 
+/**
+ * The name shown above a player in-game. Any character is allowed — clan tags,
+ * symbols and emoji are all normal here — so this only bounds the length. It
+ * is a label rather than an identity, so unlike `inGameIdSchema` it carries no
+ * unique index either.
+ *
+ * The only exclusions are C0/C1 control characters, which are invisible and
+ * would let a name forge line breaks in the organizer's roster export, and
+ * lone surrogates, which are not valid text. Zero-width joiners stay allowed
+ * so multi-part emoji survive.
+ */
+const inGameNameSchema = z
+  .string()
+  .trim()
+  .transform(normalizeText)
+  .pipe(
+    z
+      .string()
+      .min(2, "In-Game Name must be at least 2 characters")
+      .max(40, "In-Game Name must be 40 characters or fewer")
+      .refine(
+        (value) => !/[\p{Cc}\p{Cs}]/u.test(value),
+        "In-Game Name may not contain invisible control characters"
+      )
+  )
+
 const inGameIdSchema = z
   .string()
   .trim()
@@ -87,6 +113,7 @@ export const teamMemberSchema = z.object({
   fullName: personNameSchema,
   phone: phoneSchema,
   email: emailSchema,
+  inGameName: inGameNameSchema,
   inGameId: inGameIdSchema,
 })
 
@@ -100,6 +127,7 @@ export type TeamMemberInput = z.infer<typeof teamMemberSchema>
 export const memberSelfEditSchema = z.object({
   fullName: personNameSchema,
   phone: phoneSchema,
+  inGameName: inGameNameSchema,
   inGameId: inGameIdSchema,
 })
 
@@ -124,6 +152,7 @@ export const teamDetailsSchema = z.object({
   iglName: personNameSchema,
   iglPhone: phoneSchema,
   iglEmail: emailSchema,
+  iglInGameName: inGameNameSchema,
   iglInGameId: inGameIdSchema,
 })
 

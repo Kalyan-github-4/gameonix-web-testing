@@ -392,7 +392,12 @@ export type ConfirmOutcome =
  */
 export async function confirmMemberDetails(
   context: MemberContext,
-  input: { fullName: string; phone: string; inGameId: string }
+  input: {
+    fullName: string
+    phone: string
+    inGameName: string
+    inGameId: string
+  }
 ): Promise<ConfirmOutcome> {
   const parsed = memberSelfEditSchema.safeParse(input)
 
@@ -419,6 +424,7 @@ export async function confirmMemberDetails(
       .set({
         fullName: parsed.data.fullName,
         phone: parsed.data.phone,
+        inGameName: parsed.data.inGameName,
         inGameId: parsed.data.inGameId,
         emailVerifiedAt: member.emailVerifiedAt ?? now,
         // Changing the number un-proves it. A code already in flight stops

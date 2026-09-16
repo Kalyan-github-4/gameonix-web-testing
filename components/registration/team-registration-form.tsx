@@ -55,8 +55,15 @@ const MEMBER_FIELDS = [
     autoComplete: "email",
   },
   {
+    name: "inGameName",
+    label: "In-Game Name",
+    type: "text",
+    placeholder: "PhantomArjun",
+    autoComplete: "off",
+  },
+  {
     name: "inGameId",
-    label: "In-Game ID (IGN / UID)",
+    label: "In-Game ID (UID)",
     type: "text",
     placeholder: "5182930471",
     autoComplete: "off",
@@ -117,11 +124,13 @@ export function TeamRegistrationForm() {
       iglName: String(formData.get("iglName") ?? ""),
       iglPhone: String(formData.get("iglPhone") ?? ""),
       iglEmail: String(formData.get("iglEmail") ?? ""),
+      iglInGameName: String(formData.get("iglInGameName") ?? ""),
       iglInGameId: String(formData.get("iglInGameId") ?? ""),
       members: rows.map((_, index) => ({
         fullName: String(formData.get(`members[${index}].fullName`) ?? ""),
         phone: String(formData.get(`members[${index}].phone`) ?? ""),
         email: String(formData.get(`members[${index}].email`) ?? ""),
+        inGameName: String(formData.get(`members[${index}].inGameName`) ?? ""),
         inGameId: String(formData.get(`members[${index}].inGameId`) ?? ""),
       })),
     }
@@ -315,8 +324,21 @@ export function TeamRegistrationForm() {
             />
           </Field>
           <Field
+            id="iglInGameName"
+            label="IGL In-Game Name"
+            error={errors.iglInGameName}
+          >
+            <Input
+              {...fieldProps("iglInGameName", errors.iglInGameName)}
+              name="iglInGameName"
+              autoComplete="off"
+              placeholder="PhantomRohan"
+              onChange={() => clearError("iglInGameName")}
+            />
+          </Field>
+          <Field
             id="iglInGameId"
-            label="IGL In-Game ID (IGN / UID)"
+            label="IGL In-Game ID (UID)"
             error={errors.iglInGameId}
           >
             <Input

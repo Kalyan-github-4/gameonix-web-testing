@@ -101,7 +101,8 @@ export default async function RegistrationsPage() {
                         {team.teamName}
                       </CardTitle>
                       <CardDescription>
-                        IGL {team.iglName} · {team.iglInGameId} ·{" "}
+                        IGL {team.iglName} · {team.iglInGameName} ·{" "}
+                        {team.iglInGameId} ·{" "}
                         {team.iglPhone} · {team.iglEmail}
                       </CardDescription>
                     </div>
@@ -136,6 +137,9 @@ export default async function RegistrationsPage() {
                         <tr>
                           <th className="py-1.5 pr-4 font-medium">#</th>
                           <th className="py-1.5 pr-4 font-medium">Player</th>
+                          <th className="py-1.5 pr-4 font-medium">
+                            In-Game Name
+                          </th>
                           <th className="py-1.5 pr-4 font-medium">In-Game ID</th>
                           <th className="py-1.5 pr-4 font-medium">Phone</th>
                           <th className="py-1.5 pr-4 font-medium">Email</th>
@@ -152,6 +156,7 @@ export default async function RegistrationsPage() {
                               {member.position}
                             </td>
                             <td className="py-2 pr-4">{member.fullName}</td>
+                            <td className="py-2 pr-4">{member.inGameName}</td>
                             <td className="py-2 pr-4 font-mono text-xs">
                               {member.inGameId}
                             </td>

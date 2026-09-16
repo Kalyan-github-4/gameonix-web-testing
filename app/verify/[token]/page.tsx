@@ -63,6 +63,7 @@ export default async function MemberVerificationPage({
     fullName: member.fullName,
     email: member.email,
     phone: member.phone,
+    inGameName: member.inGameName,
     inGameId: member.inGameId,
     emailVerified: !!member.emailVerifiedAt,
     phoneVerified: !!member.phoneVerifiedAt,

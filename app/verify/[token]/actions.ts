@@ -37,7 +37,12 @@ const LINK_DEAD = "This link is no longer valid. Ask your IGL to send a new one.
 
 export async function confirmDetailsAction(
   token: string,
-  input: { fullName: string; phone: string; inGameId: string }
+  input: {
+    fullName: string
+    phone: string
+    inGameName: string
+    inGameId: string
+  }
 ): Promise<ConfirmActionResult> {
   const context = await loadMemberByToken(token)
 

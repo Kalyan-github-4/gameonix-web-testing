@@ -46,6 +46,7 @@ export const teams = pgTable(
     iglName: text("igl_name").notNull(),
     iglPhone: text("igl_phone").notNull(),
     iglEmail: text("igl_email").notNull(),
+    iglInGameName: text("igl_in_game_name").notNull(),
     iglInGameId: text("igl_in_game_id").notNull(),
 
     // Organizer workflow
@@ -98,6 +99,10 @@ export const teamMembers = pgTable(
     fullName: text("full_name").notNull(),
     phone: text("phone").notNull(),
     email: text("email").notNull(),
+    // The display name shown in-game. Unlike `inGameId` this is not an
+    // identity: two players may legitimately share one, so it carries no
+    // unique index.
+    inGameName: text("in_game_name").notNull(),
     inGameId: text("in_game_id").notNull(),
 
     // Roster order as entered in the form (1-based).

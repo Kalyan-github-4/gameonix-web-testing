@@ -45,6 +45,7 @@ async function main() {
       iglName: "Smoke Igl",
       iglPhone: `+9198${stamp}0${stamp.slice(0, 1)}`.slice(0, 13),
       iglEmail: `igl.${stamp}@example.com`,
+      iglInGameName: `Smoke IGL ${stamp}`,
       iglInGameId: `smokeigl${stamp}`,
       hubTokenHash: hubToken.hash,
       verificationExpiresAt: verificationDeadline(),
@@ -56,6 +57,7 @@ async function main() {
     fullName: "Smoke Player",
     phone: `+9197${stamp}0${stamp.slice(0, 1)}`.slice(0, 13),
     email: `player.${stamp}@example.com`,
+    inGameName: `Smoke Player ${stamp}`,
     inGameId: `smoke${stamp}`,
     position: 1,
     verifyTokenHash: memberToken.hash,
@@ -72,6 +74,7 @@ async function main() {
     const confirmed = await confirmMemberDetails(context, {
       fullName: "Smoke Player",
       phone: context.member.phone,
+      inGameName: context.member.inGameName,
       inGameId: context.member.inGameId,
     })
     check("player confirms details", confirmed.ok)

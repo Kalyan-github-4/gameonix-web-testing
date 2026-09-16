@@ -32,6 +32,7 @@ export type HubMemberView = {
   fullName: string
   email: string
   phone: string
+  inGameName: string
   inGameId: string
   emailVerified: boolean
   phoneVerified: boolean
@@ -43,6 +44,7 @@ export type HubView = {
   iglName: string
   iglEmail: string
   iglPhone: string
+  iglInGameName: string
   iglInGameId: string
   iglEmailVerified: boolean
   iglPhoneVerified: boolean
@@ -148,6 +150,11 @@ export function IglHub({ view }: { view: HubView }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5">
+          <div className="grid gap-0.5">
+            <span className="text-sm font-medium">In-Game Name</span>
+            <span className="text-sm">{view.iglInGameName}</span>
+          </div>
+
           <div className="grid gap-0.5">
             <span className="text-sm font-medium">In-Game ID</span>
             <span className="font-mono text-sm">{view.iglInGameId}</span>
@@ -351,6 +358,7 @@ function MemberRow({
       </div>
 
       <dl className="grid gap-3 sm:grid-cols-2">
+        <Detail label="In-Game Name" value={member.inGameName} />
         <Detail label="In-Game ID" value={member.inGameId} />
         <Detail
           label="Phone"

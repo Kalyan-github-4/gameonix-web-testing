@@ -31,6 +31,7 @@ export type MemberView = {
   fullName: string
   email: string
   phone: string
+  inGameName: string
   inGameId: string
   emailVerified: boolean
   phoneVerified: boolean
@@ -44,6 +45,7 @@ export function MemberVerification({ view }: { view: MemberView }) {
   const [details, setDetails] = React.useState({
     fullName: view.fullName,
     phone: view.phone,
+    inGameName: view.inGameName,
     inGameId: view.inGameId,
   })
   const [editing, setEditing] = React.useState(false)
@@ -133,8 +135,22 @@ export function MemberVerification({ view }: { view: MemberView }) {
                 />
               </Field>
               <Field
+                id="member-inGameName"
+                label="In-Game Name"
+                error={errors.inGameName}
+              >
+                <Input
+                  {...fieldProps("member-inGameName", errors.inGameName)}
+                  value={details.inGameName}
+                  autoComplete="off"
+                  onChange={(event) =>
+                    setDetails((d) => ({ ...d, inGameName: event.target.value }))
+                  }
+                />
+              </Field>
+              <Field
                 id="member-inGameId"
-                label="In-Game ID (IGN / UID)"
+                label="In-Game ID (UID)"
                 error={errors.inGameId}
               >
                 <Input
@@ -150,6 +166,7 @@ export function MemberVerification({ view }: { view: MemberView }) {
           ) : (
             <dl className="grid gap-3 sm:grid-cols-2">
               <ReadOnly label="Full name" value={details.fullName} />
+              <ReadOnly label="In-Game Name" value={details.inGameName} />
               <ReadOnly label="In-Game ID" value={details.inGameId} mono />
             </dl>
           )}
@@ -191,6 +208,7 @@ export function MemberVerification({ view }: { view: MemberView }) {
                   setDetails({
                     fullName: view.fullName,
                     phone: view.phone,
+                    inGameName: view.inGameName,
                     inGameId: view.inGameId,
                   })
                 }}
@@ -270,6 +288,7 @@ function VerifiedReceipt({ view }: { view: MemberView }) {
         </p>
         <dl className="mx-auto mt-2 grid gap-2 text-left text-sm sm:grid-cols-2">
           <ReadOnly label="Player" value={view.fullName} />
+          <ReadOnly label="In-Game Name" value={view.inGameName} />
           <ReadOnly label="In-Game ID" value={view.inGameId} mono />
           <ReadOnly label="Email" value={view.email} mono />
           <ReadOnly label="Phone" value={view.phone} mono />
