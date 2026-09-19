@@ -1,25 +1,11 @@
 import { randomUUID } from "node:crypto"
-import { mkdir, unlink, writeFile } from "node:fs/promises"
-import path from "node:path"
-
-import { del, put } from "@vercel/blob"
-
-import { ACCEPTED_LOGO_EXTENSIONS } from "./constants"
-
-const LOGO_DIR = path.join(process.cwd(), "public", "uploads", "team-logos")
-const PUBLIC_PREFIX = "/uploads/team-logos"
-const BLOB_PREFIX = "team-logos"
 
 /**
- * Blob storage is used whenever its token is present, which is the case on
- * Vercel once a Blob store is attached. Without it — a plain `next dev`, or a
- * VM with a persistent disk — logos fall back to `public/uploads`.
- *
- * A serverless filesystem is read-only outside `/tmp` and is rebuilt on every
- * deploy, so the local branch is not a viable production path there.
+ * Logos live in Postgres (`team_logos.data`) and are served by
+ * `app/logos/[id]/route.ts`, so no filesystem or object store is involved.
  */
-function blobStoreEnabled(): boolean {
-  return !!process.env.BLOB_READ_WRITE_TOKEN
+export function logoUrl(id: string): string {
+  return `/logos/${id}`
 }
 
 /**
@@ -48,69 +34,28 @@ export function sniffImageMimeType(bytes: Uint8Array): string | null {
   return null
 }
 
-export type StoredLogo = {
+export type PreparedLogo = {
+  id: string
   url: string
+  data: Buffer
   mimeType: string
   sizeBytes: number
 }
 
 /**
- * Persists the logo and returns the URL to store alongside the registration.
- *
- * The returned URL is absolute on Blob and root-relative on disk; both are
- * valid `next/image` sources, so nothing downstream has to know which store
- * handled the write.
+ * Reads and checks the upload, and assigns the id up front so the team row can
+ * carry the logo URL in the same transaction that inserts the image.
  */
-export async function saveTeamLogo(file: File): Promise<StoredLogo> {
-  const bytes = new Uint8Array(await file.arrayBuffer())
-  const mimeType = sniffImageMimeType(bytes)
+export async function prepareTeamLogo(file: File): Promise<PreparedLogo> {
+  const data = Buffer.from(await file.arrayBuffer())
+  const mimeType = sniffImageMimeType(data)
 
   if (!mimeType) {
     throw new InvalidLogoError("Logo must be a PNG, JPEG or WebP image")
   }
 
-  const fileName = `${randomUUID()}${ACCEPTED_LOGO_EXTENSIONS[mimeType]}`
-
-  if (blobStoreEnabled()) {
-    // The name is already a UUID, so the random suffix Blob adds by default
-    // would only make the stored path harder to match back to the row.
-    const blob = await put(`${BLOB_PREFIX}/${fileName}`, new Blob([bytes]), {
-      access: "public",
-      contentType: mimeType,
-      addRandomSuffix: false,
-    })
-
-    return { url: blob.url, mimeType, sizeBytes: bytes.byteLength }
-  }
-
-  await mkdir(LOGO_DIR, { recursive: true })
-  await writeFile(path.join(LOGO_DIR, fileName), bytes)
-
-  return {
-    url: `${PUBLIC_PREFIX}/${fileName}`,
-    mimeType,
-    sizeBytes: bytes.byteLength,
-  }
-}
-
-/**
- * Removes an already-stored logo, e.g. when the database insert fails.
- *
- * Dispatch is on the URL rather than on `blobStoreEnabled()` so that a logo
- * uploaded before the store was attached is still cleaned up afterwards.
- */
-export async function deleteTeamLogo(url: string): Promise<void> {
-  try {
-    if (url.startsWith("http")) {
-      await del(url)
-      return
-    }
-
-    if (!url.startsWith(`${PUBLIC_PREFIX}/`)) return
-    await unlink(path.join(LOGO_DIR, path.basename(url)))
-  } catch {
-    // Best-effort cleanup; a stray file must never fail the request.
-  }
+  const id = randomUUID()
+  return { id, url: logoUrl(id), data, mimeType, sizeBytes: data.byteLength }
 }
 
 export class InvalidLogoError extends Error {}

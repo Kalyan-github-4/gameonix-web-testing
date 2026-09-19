@@ -5,12 +5,11 @@ import { z } from "zod"
 
 import { db } from "@/lib/db"
 import { uniqueViolationName } from "@/lib/db/errors"
-import { teamMembers, teams } from "@/lib/db/schema"
+import { teamLogos, teamMembers, teams } from "@/lib/db/schema"
 import { MAX_TEAM_MEMBERS } from "@/lib/tournament/constants"
 import {
-  deleteTeamLogo,
   InvalidLogoError,
-  saveTeamLogo,
+  prepareTeamLogo,
 } from "@/lib/tournament/logo-storage"
 import { logoSchema, registrationSchema } from "@/lib/tournament/validation"
 import {
@@ -108,7 +107,6 @@ export async function registerTeam(
   }
 
   const registration = parsed.data
-  let storedLogo: Awaited<ReturnType<typeof saveTeamLogo>> | undefined
   let team: { id: string; teamName: string }
 
   // Link tokens are minted before the insert so the plaintext is available to
@@ -120,16 +118,16 @@ export async function registerTeam(
     hubToken = mintVerificationToken()
     memberTokens = registration.members.map(() => mintVerificationToken())
 
-    storedLogo = await saveTeamLogo(logo.data)
+    const storedLogo = await prepareTeamLogo(logo.data)
 
     team = await db.transaction(async (tx) => {
       const [inserted] = await tx
         .insert(teams)
         .values({
           teamName: registration.teamName,
-          logoUrl: storedLogo!.url,
-          logoMimeType: storedLogo!.mimeType,
-          logoSizeBytes: storedLogo!.sizeBytes,
+          logoUrl: storedLogo.url,
+          logoMimeType: storedLogo.mimeType,
+          logoSizeBytes: storedLogo.sizeBytes,
           iglName: registration.iglName,
           iglPhone: registration.iglPhone,
           iglEmail: registration.iglEmail,
@@ -139,6 +137,13 @@ export async function registerTeam(
           verificationExpiresAt: verificationDeadline(),
         })
         .returning({ id: teams.id, teamName: teams.teamName })
+
+      await tx.insert(teamLogos).values({
+        id: storedLogo.id,
+        teamId: inserted.id,
+        data: storedLogo.data,
+        mimeType: storedLogo.mimeType,
+      })
 
       await tx.insert(teamMembers).values(
         registration.members.map((member, index) => ({
@@ -156,8 +161,6 @@ export async function registerTeam(
       return inserted
     })
   } catch (error) {
-    if (storedLogo) await deleteTeamLogo(storedLogo.url)
-
     if (error instanceof InvalidLogoError) {
       return {
         status: "error",

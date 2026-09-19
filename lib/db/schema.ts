@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  bytea,
   index,
   integer,
   pgTable,
@@ -142,6 +143,25 @@ export const teamMembers = pgTable(
     uniqueIndex("team_members_verify_token_unique").on(table.verifyTokenHash),
   ]
 )
+
+/**
+ * The uploaded logo image itself, served by `app/logos/[id]/route.ts`.
+ *
+ * Kept out of `teams` so that listing teams never drags up to 2 MB per row
+ * across the wire; the team row only carries the `/logos/<id>` URL.
+ */
+export const teamLogos = pgTable("team_logos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id")
+    .notNull()
+    .unique()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  data: bytea("data").notNull(),
+  mimeType: text("mime_type").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
 
 export const VERIFICATION_CHANNELS = ["email", "phone"] as const
 export type VerificationChannel = (typeof VERIFICATION_CHANNELS)[number]

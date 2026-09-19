@@ -39,7 +39,7 @@ async function main() {
     .insert(teams)
     .values({
       teamName: `Smoke Test ${stamp}`,
-      logoUrl: "/uploads/team-logos/smoke.png",
+      logoUrl: "/logos/00000000-0000-0000-0000-000000000000",
       logoMimeType: "image/png",
       logoSizeBytes: 1,
       iglName: "Smoke Igl",

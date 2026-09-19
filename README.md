@@ -16,8 +16,8 @@ password-protected admin page.
 
 **Tech stack:** Next.js 16 (App Router, Server Actions), React 19, TypeScript,
 Tailwind CSS 4 with shadcn/ui, PostgreSQL through Drizzle ORM, Zod,
-Nodemailer or Resend for email, Fast2SMS for SMS, and Vercel Blob for logo
-storage (optional).
+Nodemailer or Resend for email, and Fast2SMS for SMS. Team logos are stored in
+the Postgres database itself, so there is no separate file storage to set up.
 
 ---
 
@@ -111,7 +111,6 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 | `MAIL_PROVIDER` + `SMTP_*` / `RESEND_API_KEY`, `MAIL_FROM` | To send email | `smtp` (e.g. Gmail) or `resend`. |
 | `SMS_PROVIDER`, `FAST2SMS_API_KEY` | To send SMS | `console` for local development, `fast2sms` for real OTPs to Indian (+91) numbers. |
 | `ADMIN_USER`, `ADMIN_PASSWORD` | For admin page | If either is missing, `/admin` denies everyone. |
-| `BLOB_READ_WRITE_TOKEN` | No | If set, logos upload to Vercel Blob. If not, they are saved to `public/uploads/`. |
 | `VERIFICATION_ENABLED` | No | Set to `"false"` to stop all outgoing emails and OTPs at once. |
 
 ### Email
@@ -226,10 +225,12 @@ rules, the error appears on the matching form field.
 
 ### Logo storage
 
-[lib/tournament/logo-storage.ts](lib/tournament/logo-storage.ts) uploads to
-**Vercel Blob** when `BLOB_READ_WRITE_TOKEN` is set. Otherwise it writes to
-`public/uploads/team-logos/` (gitignored), which works locally or on any server
-with a persistent disk.
+Logos are saved in the database, in the `team_logos` table (a `bytea` column),
+in the same transaction as the team. If a registration fails, no logo is left
+behind, and deleting a team deletes its logo too. The team row stores the URL
+`/logos/<id>`, and [app/logos/[id]/route.ts](app/logos/[id]/route.ts) serves the
+image from the database with long-lived cache headers. The upload is checked in
+[lib/tournament/logo-storage.ts](lib/tournament/logo-storage.ts).
 
 ---
 
@@ -266,11 +267,7 @@ proxy.ts                     Protects /admin/* with HTTP Basic auth
 2. Add all the environment variables from `.env` in the project settings. Set
    `APP_URL` to your production URL and use a real `SMS_PROVIDER`, because
    `console` is refused in production.
-3. For logo uploads, add a **Blob** store under Storage and create it in
-   **public** access mode. A private store makes every registration fail, and
-   you can't change a store's access mode after creating it. Vercel then sets
-   `BLOB_READ_WRITE_TOKEN` for you.
-4. Run `npm run db:migrate` against the production `DATABASE_URL` before the
+3. Run `npm run db:migrate` against the production `DATABASE_URL` before the
    first deploy, and again whenever you add new migrations.
 
 ---
@@ -285,5 +282,5 @@ proxy.ts                     Protects /admin/* with HTTP Basic auth
 | Gmail rejects login | Use an App Password, not your account password, and keep `MAIL_FROM` on the same address as `SMTP_USER`. |
 | Emails never arrive with Resend | Until your domain is verified, Resend only delivers to your own account email. Use `npm run verify:links` for other addresses. |
 | `/admin` keeps asking for a password | Set both `ADMIN_USER` and `ADMIN_PASSWORD`, then restart the dev server. |
-| Logo upload fails on Vercel | The Blob store must be public. Create a new public one. |
+| Registration fails with `relation "team_logos" does not exist` | Run `npm run db:migrate`. |
 | Port 3000 already in use | Run `npm run dev -- -p 3001` and set `APP_URL` to match. |
